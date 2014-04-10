@@ -20,35 +20,53 @@
 
 static int increment_pointer(struct bfi_state *bfi)
 {
+	int return_code = 0;
+	if (bfi->pointer >= (MEMORY_SIZE + bfi->memory)) {
+		fprintf(stderr, "error: overflow %ld\n", bfi->pointer - bfi->memory);
+		return_code = 1;
+	}
 	bfi->pointer++;
-	return 0;
+	return return_code;
 }
 
 static int decrement_pointer(struct bfi_state *bfi)
 {
+	int return_code = 0;
+	if (bfi->pointer < bfi->memory) {
+		fprintf(stderr, "error: underflow %ld\n", bfi->pointer - bfi->memory);
+		return_code = 2;
+	}
 	bfi->pointer--;
-	return 0;
+	return return_code;
 }
 
 static int increment_byte(struct bfi_state *bfi)
 {
-	if (bfi->pointer >= MEMORY_SIZE + bfi->memory) puts("FUCK!");
+	int return_code = 0;
+	if (bfi->pointer >= (MEMORY_SIZE + bfi->memory)) {
+		fprintf(stderr, "error: overflow %ld\n", bfi->pointer - bfi->memory);
+		return_code = 3;
+	}
 	(*bfi->pointer)++;
 	
-	return bfi->pointer >= MEMORY_SIZE + bfi->memory;
+	return return_code;
 }
 
 static int decrement_byte(struct bfi_state *bfi)
 {
-	if (bfi->pointer < 0) puts("FUCK!");
+	int return_code = 0;
+	if (bfi->pointer < bfi->memory) {
+		fprintf(stderr, "error: underflow %ld\n", bfi->pointer - bfi->memory);
+		return_code = 4;
+	}
 	(*bfi->pointer)--;
 	
-	return bfi->pointer < 0;
+	return return_code;
 }
 
-static int output(struct bfi_state *bfi)
+static int output(const struct bfi_state *bfi)
 {
-	printf("%c", *bfi->pointer);
+	putchar(*bfi->pointer);
 	return 0;
 }
 
@@ -63,57 +81,76 @@ static int input(struct bfi_state *bfi)
 
 static int forward(struct bfi_state *bfi)
 {
-	if (!*bfi->pointer) {
-		while (*bfi->ip != ']') {
+	if (*bfi->pointer == 0) {	//if mp does not point at a 0
+		bfi->ip++;
+		int ignore_count = 0;
+		while (!(*bfi->ip == ']' && ignore_count == 0)) {
+			//while current instruction isnt a ']' or ignore count isnt 0
+			if (*bfi->ip == '[') {
+				ignore_count++;
+			} else if (*bfi->ip == ']') {
+				ignore_count--;
+			}
 			bfi->ip++;
 			if (bfi->ip >= bfi->instructions + bfi->instruction_size) {
-				return 1;
+				return 5;
 			}
 		}
-		bfi->ip++;
+		//bfi->ip++;
 	}
 	return 0;
 }
 
 static int backward(struct bfi_state *bfi)
 {
-	if (*bfi->pointer) {
-		while (*bfi->ip != '[') {
+	if (*bfi->pointer != 0) {
+		bfi->ip--;
+		int ignore_count = 0;
+		while (!(*bfi->ip == '[' && ignore_count == 0)) {
+			if (*bfi->ip == ']') {
+				ignore_count++;
+			} else if (*bfi->ip == '[') {
+				ignore_count--;
+			}
 			bfi->ip--;
 			if (bfi->ip < bfi->instructions) {
-				return 1;
+				return 6;
 			}
 		}
+		bfi->ip--;
 	}
 	return 0;
 }
 
-static int hashtag(struct bfi_state *bfi)
+static int hashtag(const struct bfi_state *bfi)
 {
-	int offset = bfi->instruction_size > 10 ? 10 : bfi->instruction_size;
-	for (char *i = bfi->instructions; i < bfi->instructions + offset; ++i) {
+	for (unsigned char *i = (unsigned char *)bfi->memory; i < bfi->memory + 10; ++i) {
 		putchar(*i);
 	}
-	putchar('\n');
 	
 	return 0;
 }
 
 //interface
 
-struct bfi_state *create_bfi(char *instructions, unsigned int size)
+struct bfi_state *create_bfi(const char *instructions, unsigned int size)
 {
 	struct bfi_state *bfi = malloc(sizeof(struct bfi_state));
 	bfi->pointer = bfi->memory;
 	bfi->instructions = instructions;
-	bfi->ip = instructions;
+	bfi->ip = (char *)instructions;
 	bfi->instruction_size = size;
 	memset(bfi->memory, 0, MEMORY_SIZE * sizeof(bfi->memory[0]));
 	
 	return bfi;
 }
 
-static int execute(struct bfi_state *bfi, char instruction)
+void destroy_bfi(struct bfi_state *bfi)
+{
+	free(bfi);
+}
+
+static int execute(struct bfi_state *bfi, const char instruction)
 {
 	switch (instruction) {
 		case '>':
@@ -142,10 +179,10 @@ static int execute(struct bfi_state *bfi, char instruction)
 int run(struct bfi_state *bfi)
 {
 	while (bfi->ip != bfi->instructions + bfi->instruction_size) {
+		//debug(bfi);
 		int result = execute(bfi, *bfi->ip);
-		//printf("instruction: %c\tresult: %d\n", *bfi->ip, result);
 		if (result)
-			return 1;
+			return result;
 		bfi->ip++;
 	}
 	return 0;
@@ -153,11 +190,12 @@ int run(struct bfi_state *bfi)
 
 //debug
 
-void print(struct bfi_state *bfi)
+void debug(struct bfi_state *bfi)
 {
-	for (unsigned char *i = bfi->pointer; i < bfi->memory + MEMORY_SIZE; i++) {
-		putc(*i, stdout);
-	}
-	putchar('\n');
+	printf("*ip: %c\tip: %ld\tmp: %ld\t*mp: %d\n",
+		*bfi->ip,
+		bfi->ip - bfi->instructions,
+		bfi->pointer - bfi->memory,
+		*bfi->pointer);
 }
 
