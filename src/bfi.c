@@ -21,7 +21,7 @@
 static int increment_pointer(struct bfi_state *bfi)
 {
 	int return_code = 0;
-	if (bfi->pointer >= (MEMORY_SIZE + bfi->memory)) {
+	if (bfi->pointer >= (MEMORY_SIZE + bfi->memory)) {	//if pointer overflows
 		fprintf(stderr, "error: overflow %ld\n", bfi->pointer - bfi->memory);
 		return_code = 1;
 	}
@@ -32,7 +32,7 @@ static int increment_pointer(struct bfi_state *bfi)
 static int decrement_pointer(struct bfi_state *bfi)
 {
 	int return_code = 0;
-	if (bfi->pointer < bfi->memory) {
+	if (bfi->pointer < bfi->memory) {	//if pointer underflows
 		fprintf(stderr, "error: underflow %ld\n", bfi->pointer - bfi->memory);
 		return_code = 2;
 	}
@@ -42,26 +42,16 @@ static int decrement_pointer(struct bfi_state *bfi)
 
 static int increment_byte(struct bfi_state *bfi)
 {
-	int return_code = 0;
-	if (bfi->pointer >= (MEMORY_SIZE + bfi->memory)) {
-		fprintf(stderr, "error: overflow %ld\n", bfi->pointer - bfi->memory);
-		return_code = 3;
-	}
-	(*bfi->pointer)++;
+	(*bfi->pointer)++;	//increment memory
 	
-	return return_code;
+	return 0;
 }
 
 static int decrement_byte(struct bfi_state *bfi)
 {
-	int return_code = 0;
-	if (bfi->pointer < bfi->memory) {
-		fprintf(stderr, "error: underflow %ld\n", bfi->pointer - bfi->memory);
-		return_code = 4;
-	}
-	(*bfi->pointer)--;
+	(*bfi->pointer)--;	//decrement memory
 	
-	return return_code;
+	return 0;
 }
 
 static int output(const struct bfi_state *bfi)
@@ -96,7 +86,6 @@ static int forward(struct bfi_state *bfi)
 				return 5;
 			}
 		}
-		//bfi->ip++;
 	}
 	return 0;
 }
@@ -122,7 +111,7 @@ static int backward(struct bfi_state *bfi)
 	return 0;
 }
 
-static int hashtag(const struct bfi_state *bfi)
+static int hashtag(const struct bfi_state *bfi)	//lol
 {
 	for (unsigned char *i = (unsigned char *)bfi->memory; i < bfi->memory + 10; ++i) {
 		putchar(*i);
